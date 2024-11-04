@@ -41,17 +41,51 @@ def fetch_images(soup, base_url):
 
 def fetch_title():
     url = _url.get()
+    # request website
     try:
         page = requests.get(url)
     except requests.RequestException as err:
         sb(str(err))
+    # Parse HTML from website
     soup = BeautifulSoup(page.content, 'html.parser')
-    title = soup.title.string if soup.title else 'No title found'
-    sb(f'Title: {title}')
+    # If a title is found, display it
+    if soup.title:
+        title = soup.title.string
+        sb(f'Title: {title}')
+    else:
+        sb('No title found')
 
 
 def fetch_external_links():
-    pass
+    url = _url.get()
+    try:
+        page = requests.get(url)
+    except requests.RequestException as err:
+        sb(str(err))
+
+    soup = BeautifulSoup(page.content, 'html.parser')
+    # Get part of URL after // (such as in https://) to compare and check for internal links later
+    base_url = url.split("//")[-1]
+    
+    # List for storing external links
+    external_links = []
+    # Create a list of all <a> tags with an href
+    links = soup.find_all('a', href=True)
+
+    for link in links:
+        link_href = link['href']
+        # If the link begins with 'http' or 'https' and is an external link, append to list
+        if (link_href.startswith('http') or link_href.startswith('https')) and base_url not in link_href:
+            external_links.append(link_href)
+    
+    if external_links:
+        # Use _images to display links in output box
+        _images.set(tuple(external_links))
+        sb(f'External links found: {len(external_links)}')
+    else:
+        # Use _images to clear the output box
+        _images.set(())
+        sb('No external links found')
 
 
 def save():
@@ -119,14 +153,16 @@ if __name__ == "__main__": # execute logic if run directly
         _url_frame, width=40, textvariable=_url) # text box
     _url_entry.grid(row=0, column=0, sticky=(E, W, S, N), padx=5)
 
-    # grid mgr places object at position
+    # Place 'Fetch img' button at desired position
     _fetch_img_btn = ttk.Button(_url_frame, text='Fetch img', command=fetch_url) # create button
     # fetch_url() is callback for button press
     _fetch_img_btn.grid(row=0, column=1, sticky=W, padx=5)
     
+    # Place 'Fetch title' button at desired position
     _fetch_title_btn = ttk.Button(_url_frame, text='Fetch title', command=fetch_title)
     _fetch_title_btn.grid(row=1, column=1, sticky=W, padx=5)
 
+    # Place 'Fetch link' button at desired position 
     _fetch_link_btn = ttk.Button(_url_frame, text='Fetch link', command=fetch_external_links)
     _fetch_link_btn.grid(row=2, column=1, sticky=W, padx=5)
 
